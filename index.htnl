@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Quiz | Professional Assessment</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #8b5cf6;
+            --background: #0f172a;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- VFX Background --- */
+        #canvas-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.6;
+        }
+
+        /* --- Glassmorphism Container --- */
+        .app-container {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            perspective: 1000px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+            display: none; /* Hidden by default */
+        }
+
+        .card.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            animation: cardEntrance 0.6s ease-out forwards;
+        }
+
+        @keyframes cardEntrance {
+            0% { opacity: 0; transform: translateY(30px) scale(0.9); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* --- Typography & Elements --- */
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            margin-bottom: 1rem;
+            text-align: center;
+            letter-spacing: -0.02em;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        p {
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        /* --- Buttons --- */
+        .btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 16px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn:disabled {
+            background: #334155;
+            cursor: not-allowed;
+            opacity: 0.7;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(255,255,255,0.2), transparent);
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        .btn:hover::after {
+            opacity: 1;
+        }
+
+        /* --- Options Grid --- */
+        .options-grid {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .option-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            padding: 16px 20px;
+            border-radius: 12px;
+            color: var(--text-main);
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .option-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateX(5px);
+        }
+
+        .option-btn.selected {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+        }
+
+        .option-marker {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--text-muted);
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+        }
+
+        .option-btn.selected .option-marker {
+            border-color: var(--primary);
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .option-marker::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0;
+            transform: scale(0);
+            transition: 0.2s;
+        }
+
+        .option-btn.selected .option-marker::after {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* --- Progress & Stats --- */
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 10px rgba(236, 72, 153, 0.5);
+        }
+
+        /* --- Result Screen --- */
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: conic-gradient(var(--primary) 0%, rgba(255,255,255,0.1) 0%);
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .score-inner {
+            width: 130px;
+            height: 130px;
+            background: var(--background);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        .score-number {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #a5b4fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .score-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* --- Footer --- */
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* --- Utility Classes for Animations --- */
+        .fade-out {
+            animation: fadeOut 0.4s ease forwards;
+        }
+
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateY(-20px) scale(0.95); }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .card { padding: 24px; }
+            h1 { font-size: 2rem; }
+            h2 { font-size: 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- VFX Background Canvas -->
+    <canvas id="canvas-bg"></canvas>
+
+    <div class="app-container">
+        
+        <!-- Screen 1: Start -->
+        <div id="start-screen" class="card active">
+            <h1>Quantum Quiz</h1>
+            <p>Test your knowledge with our professional assessment suite. 5 questions, instant results.</p>
+            <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+                <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+            </div>
+            <button id="start-btn" class="btn">Initialize Quiz</button>
+        </div>
+
+        <!-- Screen 2: Quiz -->
+        <div id="quiz-screen" class="card">
+            <div class="quiz-header">
+                <span id="question-count">Question 1/5</span>
+                <span>Category: General Tech</span>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            
+            <h2 id="question-text">Question goes here?</h2>
+            
+            <div class="options-grid" id="options-container">
+                <!-- Options injected via JS -->
+            </div>
+
+            <button id="next-btn" class="btn" disabled>Next Question</button>
+        </div>
+
+        <!-- Screen 3: Results -->
+        <div id="result-screen" class="card">
+            <h1>Assessment Complete</h1>
+            <p>Here is your performance summary.</p>
+            
+            <div class="score-circle" id="score-circle-outer">
+                <div class="score-inner">
+                    <span class="score-number" id="final-score">0</span>
+                    <span class="score-label">Score</span>
+                </div>
+            </div>
+
+            <p id="feedback-text">Excellent work!</p>
+            <button id="restart-btn" class="btn">Retake Assessment</button>
+        </div>
+
+        <div class="footer">
+            &copy; 2024 Professional Quiz Engine
+        </div>
+    </div>
+
+    <script>
+        /* --- Data: Quiz Questions --- */
+        const quizData = [
+            {
+                question: "Which language runs in a web browser?",
+                options: ["Java", "C", "Python", "JavaScript"],
+                correct: 3
+            },
+            {
+                question: "What does CSS stand for?",
+                options: ["Central Style Sheets", "Cascading Style Sheets", "Cascading Simple Sheets", "Cars SUVs Sailboats"],
+                correct: 1
+            },
+            {
+                question: "What does HTML stand for?",
+                options: ["Hypertext Markup Language", "Hypertext Markdown Language", "Hyperloop Machine Language", "Helicopters Terminals Motorboats Lamborginis"],
+                correct: 0
+            },
+            {
+                question: "Which year was JavaScript launched?",
+                options: ["1996", "1995", "1994", "None of the above"],
+                correct: 1
+            },
+            {
+                question: "Which symbol is used for comments in JavaScript?",
+                options: ["<!-- -->", "#", "//", "/* */"],
+                correct: 2
+            }
+        ];
+
+        /* --- State Management --- */
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let selectedOptionIndex = null;
+
+        /* --- DOM Elements --- */
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
+        
+        const startBtn = document.getElementById('start-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const questionCountSpan = document.getElementById('question-count');
+        const progressBar = document.getElementById('progress-bar');
+        
+        const finalScoreSpan = document.getElementById('final-score');
+        const scoreCircleOuter = document.getElementById('score-circle-outer');
+        const feedbackText = document.getElementById('feedback-text');
+
+        /* --- Event Listeners --- */
+        startBtn.addEventListener('click', startQuiz);
+        nextBtn.addEventListener('click', handleNextQuestion);
+        restartBtn.addEventListener('click', restartQuiz);
+
+        /* --- Core Logic --- */
+        function switchScreen(from, to) {
+            from.classList.add('fade-out');
+            setTimeout(() => {
+                from.style.display = 'none';
+                from.classList.remove('active', 'fade-out');
+                to.style.display = 'block';
+                // Trigger reflow
+                void to.offsetWidth;
+                to.classList.add('active');
+            }, 300);
+        }
+
+        function startQuiz() {
+            score = 0;
+            currentQuestionIndex = 0;
+            switchScreen(startScreen, quizScreen);
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const currentData = quizData[currentQuestionIndex];
+            
+            // UI Updates
+            questionText.textContent = currentData.question;
+            questionCountSpan.textContent = Question ${currentQuestionIndex + 1}/${quizData.length};
+            
+            // Progress Bar
+            const progressPercent = ((currentQuestionIndex) / quizData.length) * 100;
+            progressBar.style.width = ${progressPercent}%;
+
+            // Reset Options
+            optionsContainer.innerHTML = '';
+            selectedOptionIndex = null;
+            nextBtn.disabled = true;
+            nextBtn.textContent = currentQuestionIndex === quizData.length - 1 ? "Finish Quiz" : "Next Question";
+
+            // Generate Options with Animation delay
+            currentData.options.forEach((opt, index) => {
+                const btn = document.createElement('div');
+                btn.className = 'option-btn';
+                btn.style.animation = fadeIn 0.3s ease forwards ${index * 0.1}s;
+                btn.style.opacity = '0'; // Initial state for animation
+                
+                btn.innerHTML = `
+                    <div class="option-marker"></div>
+                    <span>${opt}</span>
+                `;
+                
+                btn.onclick = () => selectOption(index, btn);
+                optionsContainer.appendChild(btn);
+            });
+            
+            // Style for dynamic option fade in
+            if(!document.getElementById('dynamic-styles')) {
+                const style = document.createElement('style');
+                style.id = 'dynamic-styles';
+                style.innerHTML = @keyframes fadeIn { to { opacity: 1; transform: translateX(0); } };
+                document.head.appendChild(style);
+            }
+        }
+
+        function selectOption(index, element) {
+            // Remove selected class from all
+            const allOptions = optionsContainer.querySelectorAll('.option-btn');
+            allOptions.forEach(opt => opt.classList.remove('selected'));
+            
+            // Add to clicked
+            element.classList.add('selected');
+            selectedOptionIndex = index;
+            
+            // Enable next button
+            nextBtn.disabled = false;
+        }
+
+        function handleNextQuestion() {
+            // Check Answer
+            if (selectedOptionIndex === quizData[currentQuestionIndex].correct) {
+                score++;
+            }
+
+            currentQuestionIndex++;
+
+            if (currentQuestionIndex < quizData.length) {
+                // Card exit animation simulation
+                quizScreen.style.transform = "translateX(-20px)";
+                quizScreen.style.opacity = "0";
+                
+                setTimeout(() => {
+                    loadQuestion();
+                    quizScreen.style.transition = "none";
+                    quizScreen.style.transform = "translateX(20px)";
+                    
+                    setTimeout(() => {
+                        quizScreen.style.transition = "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
+                        quizScreen.style.transform = "translateX(0)";
+                        quizScreen.style.opacity = "1";
+                    }, 50);
+                }, 300);
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            progressBar.style.width = '100%';
+            switchScreen(quizScreen, resultScreen);
+            
+            // Animate Score
+            animateValue(finalScoreSpan, 0, score, 1000);
+            
+            // Visual Updates based on score
+            const percentage = (score / quizData.length) * 100;
+            const conicValue = percentage * 3.6; // 360 degrees
+            scoreCircleOuter.style.background = conic-gradient(var(--success) ${conicValue}deg, rgba(255,255,255,0.1) 0deg);
+
+            if (percentage === 100) {
+                feedbackText.textContent = "Perfect! You're a master.";
+                triggerConfetti();
+            } else if (percentage >= 80) {
+                feedbackText.textContent = "Great job! Almost perfect.";
+                triggerConfetti();
+            } else if (percentage >= 50) {
+                feedbackText.textContent = "Good effort! Keep practicing.";
+            } else {
+                feedbackText.textContent = "Keep learning, you'll get there!";
+            }
+        }
+
+        function restartQuiz() {
+            switchScreen(resultScreen, startScreen);
+        }
+
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        /* --- VFX: Canvas Particle Background --- */
+        const canvas = document.getElementById('canvas-bg');
+        const ctx = canvas.getContext('2d');
+        let particlesArray;
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.1; // Small stars
+                this.speedX = (Math.random() * 0.5) - 0.25;
+                this.speedY = (Math.random() * 0.5) - 0.25;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.size > 0.2) this.size -= 0.005; // Twinkle effect
+                if (this.size <= 0.2) this.size = Math.random() * 2 + 0.1;
+
+                // Wrap around screen
+                if (this.x > canvas.width) this.x = 0;
+                if (this.x < 0) this.x = canvas.width;
+                if (this.y > canvas.height) this.y = 0;
+                if (this.y < 0) this.y = canvas.height;
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(165, 180, 252, 0.5)'; // Light indigo
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particlesArray = [];
+            const numberOfParticles = (canvas.width * canvas.height) / 5000;
+            for (let i = 0; i < numberOfParticles; i++) {
+                particlesArray.push(new Particle());
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+                particlesArray[i].draw();
+            }
+            // Draw connecting lines
+            connectParticles();
+            requestAnimationFrame(animateParticles);
+        }
+
+        function connectParticles() {
+            let opacityValue = 1;
+            for (let a = 0; a < particlesArray.length; a++) {
+                for (let b = a; b < particlesArray.length; b++) {
+                    let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x)) +
+                                   ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
+                    if (distance < (canvas.width/7) * (canvas.height/7)) {
+                        opacityValue = 1 - (distance/10000);
+                        ctx.strokeStyle = 'rgba(148, 163, 184,' + opacityValue * 0.15 + ')'; // Very subtle connection
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                        ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initParticles();
+        });
+
+        initParticles();
+        animateParticles();
+
+        /* --- VFX: Confetti Engine --- */
+        function triggerConfetti() {
+            const duration = 3000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+            function randomInRange(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                const particleCount = 50 * (timeLeft / duration);
+                // Create particles manually if needed, but since we want single file
+                // I will add a simple CSS confetti burst here dynamically 
+                createConfettiPiece();
+            }, 250);
+        }
+
+        // Simple DOM based confetti fallback
+        function createConfettiPiece() {
+            for(let i=0; i<10; i++) {
+                const confetti = document.createElement('div');
+                confetti.style.position = 'fixed';
+                confetti.style.width = '10px';
+                confetti.style.height = '10px';
+                confetti.style.backgroundColor = hsl(${Math.random() * 360}, 100%, 50%);
+                confetti.style.top = '-10px';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.opacity = Math.random() + 0.5;
+                confetti.style.transform = rotate(${Math.random() * 360}deg);
+                confetti.style.zIndex = '1000';
+                confetti.style.pointerEvents = 'none';
+                
+                document.body.appendChild(confetti);
+
+                const anim = confetti.animate([
+                    { transform: translate3d(0,0,0) rotateX(0) rotateY(0) },
+                    { transform: translate3d(${Math.random()*100 - 50}px, 100vh, 0) rotateX(${Math.random()*360}deg) rotateY(${Math.random()*360}deg) }
+                ], {
+                    duration: Math.random() * 2000 + 1500,
+                    easing: 'cubic-bezier(0.25, 1, 0.5, 1)'
+                });
+
+                anim.onfinish = () => confetti.remove();
+            }
+        }
+
+    </script>
+</body>
+</html>
